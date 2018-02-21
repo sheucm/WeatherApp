@@ -8,8 +8,9 @@
 
 import UIKit
 import Alamofire
+import CoreLocation
 
-class WeatherVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
+class WeatherVC: UIViewController, UITableViewDelegate, UITableViewDataSource, CLLocationManagerDelegate {
 
     @IBOutlet weak var topUIView : TopUIView!
     @IBOutlet weak var tableView : UITableView!
@@ -17,10 +18,26 @@ class WeatherVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
     var currentWeather = CurrentWeather()
     var forecastWeathers = [ForecastWeather]()
     
+    let locationManager = CLLocationManager()
+    var currentLocation = CLLocation()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         tableView.delegate = self
         tableView.dataSource = self
+        
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.requestWhenInUseAuthorization()
+        locationManager.startMonitoringSignificantLocationChanges()
+        
+        
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        locationAuthStatus ()
+        
+        
         
         downloadCurrentWeather() {
             self.topUIView.updateUI(currentWeather: self.currentWeather)
@@ -56,6 +73,7 @@ class WeatherVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
     
     func downloadCurrentWeather(complete: @escaping DownloadComplete) {
         let url = URL(string: CURRENT_WEATHER_URL)!
+        print (url)
         Alamofire.request(url).responseJSON { response in
             let result = response.result
             if let dict = result.value as? Dictionary<String, Any> {
@@ -67,6 +85,7 @@ class WeatherVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
     
     func downloadForecastWeather(complete: @escaping DownloadComplete) {
         let url = URL(string: FORECAST_WEATHER_URL)!
+        print (url)
         Alamofire.request(url).responseJSON { response in
             let result = response.result
             if let dict = result.value as? Dictionary<String, Any> {
@@ -82,7 +101,20 @@ class WeatherVC: UIViewController, UITableViewDelegate, UITableViewDataSource {
     }
     
     
-    
+    func locationAuthStatus () {
+        if CLLocationManager.authorizationStatus() == .authorizedWhenInUse {
+            if let currentLocation = locationManager.location {
+                Location.sharedInstance.latitude = currentLocation.coordinate.latitude
+                Location.sharedInstance.longitude = currentLocation.coordinate.longitude
+            } else{
+                print ("Didn't fetch the locationManager.location. The locationManager.location is nil.")
+            }
+        } else {
+            locationManager.requestWhenInUseAuthorization()
+            locationAuthStatus ()
+        }
+        
+    }
     
     
 }
